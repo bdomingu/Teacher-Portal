@@ -22,18 +22,24 @@ connection.connect((err) => {
     console.log('Connected to MySQL database!');
   });
 
-app.get('/students', (req, res) => {
-    const query = 'SELECT * FROM Students';
-    connection.query(query, (err, results) => {
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token === null) {
+        return res.status(401);
+    }
+
+    jwt.verify(token, secret, (err, user) => {
         if (err) {
-            console.error(err);
-            res.status(500).send('Error retrieving users');
+            return res.status(403);
         } else {
-            console.log(results)
-            res.send(results);
+            req.user = user;
         }
+        next()
     })
-})
+}
+
 
 app.post('/addTeachers', jsonParser, async (req, res) => {
     const { teacherId, firstName, lastName, username, email, password} = req.body;
@@ -85,6 +91,23 @@ app.post('/login', jsonParser, (req, res) => {
         }
     });
 });
+
+app.get('/students', authenticateToken, (req, res) => {
+    if (req.user && req.user.TeacherId){
+        console.log(req.user)
+        const query = `SELECT * FROM Students WHERE TeacherId = ${req.user.TeacherId} ORDER BY LastName ASC`;
+
+        connection.query(query, (err, results) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error retrieving users');
+            } else {
+            console.log(results)
+            res.send(results);
+        }
+    })
+    }
+})
 
 app.listen(port, () => {
     console.log(`Listening on port: ${port}`)
