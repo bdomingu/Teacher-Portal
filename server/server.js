@@ -4,11 +4,13 @@ const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
+const cors = require('cors')
 
 const secret = 'sushi';
 
 const app = express();
 const jsonParser = bodyParser.json()
+app.use(cors())
 
 const connection = mysql.createConnection({
     host:'localhost',
@@ -92,9 +94,14 @@ app.post('/login', jsonParser, (req, res) => {
     });
 });
 
+app.post('/logout',  (req, res) => {
+    return res.status(200).json({message:'Logged out succesfully'});
+ 
+});
+
+
 app.get('/students', authenticateToken, (req, res) => {
     if (req.user && req.user.TeacherId){
-        console.log(req.user)
         const query = `SELECT * FROM Students WHERE TeacherId = ${req.user.TeacherId} ORDER BY LastName ASC`;
 
         connection.query(query, (err, results) => {
@@ -102,7 +109,6 @@ app.get('/students', authenticateToken, (req, res) => {
                 console.error(err);
                 res.status(500).send('Error retrieving users');
             } else {
-            console.log(results)
             res.send(results);
         }
     })
