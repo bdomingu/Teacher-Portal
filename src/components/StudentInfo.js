@@ -3,7 +3,7 @@ import Modal from 'react-modal';
 
 Modal.setAppElement('#root');
 
-function StudentInfo({isOpen, onClose, selectedStudent}) {
+function StudentInfo({isOpen, onRequestClose, selectedStudent}) {
 
   if (!selectedStudent) {
     return null;
@@ -18,13 +18,20 @@ function StudentInfo({isOpen, onClose, selectedStudent}) {
   
   return (
   
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onRequestClose={onRequestClose}>
     <h1>{selectedStudent.FirstName} {selectedStudent.LastName}</h1>
-    <h4>Email: {selectedStudent.Email}</h4>
-    <h4>DOB: {convertDateOfBirth(selectedStudent.DateOfBirth)}</h4>
-    <h4>Grade Level: {selectedStudent.GradeLevel}</h4>
-    <h4>Gender: {selectedStudent.Gender}</h4>
-    <button onClick={onClose}>close</button>
+    <h4>Student Info</h4>
+    <p>Email: {selectedStudent.Email}</p>
+    <p>DOB: {convertDateOfBirth(selectedStudent.DateOfBirth)}</p>
+    <p>Grade Level: {selectedStudent.GradeLevel}</p>
+    <p>Gender: {selectedStudent.Gender}</p>
+  
+    <h4>Parent Info</h4>
+    <p>Name: {selectedStudent.parentFirstName} {selectedStudent.parentLastName}</p>
+    <p>Phone Number: {selectedStudent.PhoneNumber}</p>
+    <p>Email: {selectedStudent.parentEmail}</p>
+    <p>Address: {selectedStudent.Address}</p>
+    <button onClick={onRequestClose}>close</button>
     </Modal>
   )
 }

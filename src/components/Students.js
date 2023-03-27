@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Logout from './Logout';
 import StudentInfo from './StudentInfo';
+import AssignmentForm from './AssignmentForm';
 
-/* Need to add data to the parents table
-    Need to display the parents data. MAybe look into having a join query when selecting the students
-    Need to look into creating and posting an assignment 
+/* 
 */
 function Students() {
     const [roster, setRoster] = useState([]);
     const [token] = useState((localStorage.getItem('token')))
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [showPopUp, setShowPopUp] = useState(false);
+    const [savedAssignments, setSavedAssignments] = useState([]);
 
     const handleStudentClick = useCallback((student) => {
         setSelectedStudent(student)
@@ -27,7 +27,6 @@ function Students() {
             });
 
             const students = await response.data
-            console.log(students)
             setRoster(students)
         } catch(error) {
             console.error(error);
@@ -38,33 +37,72 @@ function Students() {
         getStudentRoster();
     }, [token]);
 
+const getAssignments = async () => {
+    try {
+        const response = await axios.get('http://localhost:3100/assignments', {
+            headers: {
+                Authorization: `Bearer ${token}`
+           }
+        });
+
+        const assignments = await response.data
+        setSavedAssignments(assignments)
+
+    } catch(error) {
+        console.error(error)
+    }
+}
+
+useEffect(() => {
+    getAssignments();
+});
+
 
    
   
   return (
-    <div>
-    <Logout setRoster={setRoster}/>
-        <h2>Student Name</h2>
+    <>
         <div>
-        {roster.map((student) => {
-            
-            return (
-                <>
-                <ul>
-                <li key={student.StudentId} onClick={() => handleStudentClick(student)}>
-                {student.FirstName} {student.LastName}</li>
-                </ul>
-                </>
-            )
-            
-        })}
+            <Logout setRoster={setRoster} />
         </div>
-        <StudentInfo 
-            isOpen = {selectedStudent && showPopUp}
-            onClose = {() => setShowPopUp(false)}
-            selectedStudent={selectedStudent}
-        />
-    </div>
+        <table>
+            <thead>
+            <tr>
+                <th>Student Name</th>
+              <> 
+              {savedAssignments.map((assignment) => {
+                return (
+                    <>
+                    <th>{assignment.shortName}</th>
+                    </>
+                )
+              })}
+                
+            </> 
+            </tr>
+            </thead>
+            <>
+              {roster.map((student) => {
+                  return (
+                      <> 
+                      <tbody>                          
+                        <tr>
+                            <td key={student.StudentId} onClick={() => handleStudentClick(student)}>{student.FirstName} {student.LastName}</td>
+                            <td><input type='text'/></td>
+                        </tr>  
+                    </tbody> 
+                      </>
+                  );
+              })}
+            </>
+        </table>
+    <StudentInfo
+        isOpen={selectedStudent && showPopUp}
+        onRequestClose={() => setShowPopUp(false)}
+        selectedStudent={selectedStudent} />
+    <AssignmentForm token={token} />
+    </>
+   
   )
 }
 

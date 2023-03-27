@@ -4,9 +4,13 @@ const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
-const cors = require('cors')
+const cors = require('cors');
+const Chance = require('chance');
+
 
 const secret = 'sushi';
+const chance = new Chance();
+
 
 const app = express();
 const jsonParser = bodyParser.json()
@@ -23,6 +27,7 @@ connection.connect((err) => {
     if (err) throw err; 
     console.log('Connected to MySQL database!');
   });
+
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -102,7 +107,9 @@ app.post('/logout',  (req, res) => {
 
 app.get('/students', authenticateToken, (req, res) => {
     if (req.user && req.user.TeacherId){
-        const query = `SELECT * FROM Students WHERE TeacherId = ${req.user.TeacherId} ORDER BY LastName ASC`;
+        const query = `SELECT * FROM Students s INNER JOIN Parents p
+                    ON s.StudentId = p.StudentId
+                    WHERE TeacherId = ${req.user.TeacherId} ORDER BY s.LastName ASC`;
 
         connection.query(query, (err, results) => {
             if (err) {
@@ -115,6 +122,72 @@ app.get('/students', authenticateToken, (req, res) => {
     }
 })
 
+app.post('/assignments', jsonParser, authenticateToken, (req, res) => {
+    const {type, shortName, summary, assignedDate, dueDate } = req.body;
+
+    const query = `INSERT INTO Assignments (type, shortName, summary, assignedDate, dueDate) 
+                    VALUES ('${type}', '${shortName}', '${summary}', '${assignedDate}', '${dueDate}')`;
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            res.status(500).send('Error adding assignment');
+            console.error(err);
+        } else {
+        res.json({
+            "message": "Added assignment succesfully",
+            "results": results
+        })
+        }
+     })
+});
+
+app.get('/assignments', authenticateToken, (req, res) => {
+    if (req.user && req.user.TeacherId){
+        const query = 'SELECT * FROM Assignments';
+
+        connection.query(query, (err, results) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error retrieving assignments');
+            } else {
+            res.send(results);
+        }
+    })
+    }
+})
+
 app.listen(port, () => {
     console.log(`Listening on port: ${port}`)
 });
+
+
+/////////////////////// Insertion of Mock Data into the Parent's Table ////////////////////////////////
+
+//   const insertParentData = () => {
+//     let firstQuery = 'SELECT StudentId, LastName FROM Students';
+
+//     connection.query(firstQuery, (err, results, fields) => {
+//         if (err) throw err;
+//         let parentsData = [];
+//         results.forEach(student => {
+//             let parent = {
+//                 StudentId: student.StudentId,
+//                 LastName: student.LastName,
+//                 FirstName: chance.first(),
+//                 PhoneNumber:chance.phone(),
+//                 Email: chance.email(),
+//                 Address: chance.address() + ',' + chance.city() + ',' + chance.state() + ',' + chance.zip(),
+//                 ParentId: chance.guid()
+//             };
+//             parentsData.push(parent);
+//         });
+     
+//         let query = 'INSERT INTO Parents (StudentId, LastName, FirstName, PhoneNumber, Email, Address, ParentId) VALUES ?';
+//         connection.query(query, [parentsData.map(parent => [parent.StudentId, parent.LastName, parent.FirstName, parent.PhoneNumber, parent.Email, parent.Address, parent.ParentId])], (err, results, fields) => {
+//             if (err) throw err;
+//             console.log('Inserted data successfully');
+//         });
+//     });
+// }
+ 
+// insertParentData();

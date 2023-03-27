@@ -18,7 +18,7 @@ function Login() {
 
             const response = await axios.post('http://localhost:3100/login', teacher)
             const token = response.data.token
-
+            console.log(token)
             localStorage.setItem('token', token);
 
             if (response.status === 200) {
