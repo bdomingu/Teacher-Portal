@@ -122,6 +122,7 @@ app.get('/students', authenticateToken, (req, res) => {
     }
 })
 
+
 app.post('/assignments', jsonParser, authenticateToken, (req, res) => {
     const {type, shortName, summary, assignedDate, dueDate } = req.body;
 
@@ -154,6 +155,61 @@ app.get('/assignments', authenticateToken, (req, res) => {
         }
     })
     }
+})
+
+app.post('/post-grade', jsonParser, authenticateToken, (req, res) => {
+    const {gradeId, gradeValue, studentId, assignmentId } = req.body;
+
+    if (req.user && req.user.TeacherId){
+    const query = `INSERT INTO Grades (gradeId, gradeValue, StudentId, assignmentId, TeacherId) 
+                    VALUES ('${gradeId}', ${gradeValue}, '${studentId}', '${assignmentId}', ${req.user.TeacherId})`;
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            res.status(500).send('Error adding grade');
+            console.error(err);
+        } else {
+        res.json({
+            "message": "Added grade succesfully",
+            "results": results
+        })
+        }
+     })
+    }
+});
+
+
+app.get('/grades', authenticateToken, (req, res) => {
+    if (req.user && req.user.TeacherId){
+        const query = `SELECT * FROM Grades WHERE TeacherId = ${req.user.TeacherId} `;
+
+        connection.query(query, (err, results) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error retrieving grades');
+            } else {
+            res.send(results);
+        }
+    })
+    }
+})
+
+app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
+    const gradeId = req.params.gradeId;
+    const { gradeValue } = req.body;
+
+    const query = `UPDATE Grades SET gradeValue = ${gradeValue} WHERE gradeId = '${gradeId}'`;
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err)
+            res.status(500).send('Error updating grade.');
+        } else {
+            res.json({
+                "message": "Edited grade succesfully",
+                "results": results
+            })
+        }
+    })
 })
 
 app.listen(port, () => {

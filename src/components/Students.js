@@ -3,15 +3,18 @@ import axios from 'axios';
 import Logout from './Logout';
 import StudentInfo from './StudentInfo';
 import AssignmentForm from './AssignmentForm';
+import { v4 as uuidv4 } from 'uuid';
 
-/* 
-*/
+
 function Students() {
     const [roster, setRoster] = useState([]);
     const [token] = useState((localStorage.getItem('token')))
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [showPopUp, setShowPopUp] = useState(false);
     const [savedAssignments, setSavedAssignments] = useState([]);
+    const [grade, setGrade] = useState();
+    const [grades, setGrades] = useState({});
+
 
     const handleStudentClick = useCallback((student) => {
         setSelectedStudent(student)
@@ -57,8 +60,80 @@ useEffect(() => {
     getAssignments();
 });
 
+const postGrade = async (event, studentId, assignmentId) => {
+    event.preventDefault();
+    const gradeData = {
+        gradeId: uuidv4(),
+        gradeValue: grade,
+        studentId: studentId,
+        assignmentId: assignmentId
+    }
+    try{
+        const response = await axios.post('http://localhost:3100/post-grade', gradeData, {
+            headers: {
+            Authorization: `Bearer ${token}`
+        }
+     })
+     const gradeValue = response.data
+     setGrade(gradeValue);
+    } catch(error) {
+        console.error(error)
+    }
+}
 
-   
+const getGrades = async () => {
+    try {
+        const response = await axios.get('http://localhost:3100/grades', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        const gradesData = await response.data
+       
+        const grades = {};
+
+        gradesData.forEach(grade => {
+            const key = `${grade.StudentId}-${grade.assignmentId}`;
+            grades[key] = {
+                gradeValue:grade.gradeValue,
+                gradeId: grade.gradeId
+            }
+        });
+
+        console.log(grades)
+        setGrades(grades);
+        
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+
+useEffect(() => {
+    getGrades();
+}, [])
+
+
+const updateGrade = async (e, gradeId) => {
+    e.preventDefault();
+    console.log(gradeId)
+    const updatedValue = {
+        gradeValue: grade
+    }
+    try {
+        const response = await axios.put(`http://localhost:3100/update-grade/${gradeId}`, updatedValue, {
+            headers: {
+            Authorization: `Bearer ${token}`
+            }
+        })
+
+     const updateGrade = response.data;
+    console.log(updateGrade)
+    } catch(error) {
+        console.error(error)
+    }
+
+}
   
   return (
     <>
@@ -88,7 +163,39 @@ useEffect(() => {
                       <tbody>                          
                         <tr>
                             <td key={student.StudentId} onClick={() => handleStudentClick(student)}>{student.FirstName} {student.LastName}</td>
-                            <td><input type='text'/></td>
+                            {savedAssignments.map((assignment) => {
+                                const gradeKey = `${student.StudentId}-${assignment.assignmentId}`;
+                                const existingGrade = grades[gradeKey]?.gradeValue;
+                                const gradeId = grades[gradeKey]?.gradeId
+
+                                return <td key={assignment.assignment}>
+                                <input
+                                defaultValue={existingGrade}
+                                onChange={(e) => setGrade(e.target.value)}
+                                onBlur = {(e) => {
+                                     e.preventDefault();
+                                     if (existingGrade) {
+                                        updateGrade(e, gradeId)
+                                     } else {
+                                        postGrade(e, student.StudentId, assignment.assignmentId);
+                                     }
+                                 }} 
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                     e.preventDefault();
+                                     if (existingGrade) {
+                                        updateGrade(e, gradeId)
+                                     } else {
+                                        postGrade(e, student.StudentId, assignment.assignmentId);
+                                     }
+                                     
+                                     }
+                                 }} 
+                                 type='text'
+                                 />
+                                </td>
+                            })}
+                            
                         </tr>  
                     </tbody> 
                       </>
@@ -96,6 +203,8 @@ useEffect(() => {
               })}
             </>
         </table>
+        <div>
+        </div>
     <StudentInfo
         isOpen={selectedStudent && showPopUp}
         onRequestClose={() => setShowPopUp(false)}
