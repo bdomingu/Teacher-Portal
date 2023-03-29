@@ -198,6 +198,8 @@ app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
     const gradeId = req.params.gradeId;
     const { gradeValue } = req.body;
 
+    console.log(gradeValue)
+
     const query = `UPDATE Grades SET gradeValue = ${gradeValue} WHERE gradeId = '${gradeId}'`;
     connection.query(query, (err, results) => {
         if (err) {
@@ -211,6 +213,7 @@ app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
         }
     })
 })
+
 
 app.listen(port, () => {
     console.log(`Listening on port: ${port}`)

@@ -14,6 +14,7 @@ function Students() {
     const [savedAssignments, setSavedAssignments] = useState([]);
     const [grade, setGrade] = useState();
     const [grades, setGrades] = useState({});
+    
 
 
     const handleStudentClick = useCallback((student) => {
@@ -100,7 +101,8 @@ const getGrades = async () => {
             }
         });
 
-        console.log(grades)
+
+       
         setGrades(grades);
         
     } catch (error) {
@@ -134,7 +136,24 @@ const updateGrade = async (e, gradeId) => {
     }
 
 }
-  
+
+const calculateAverage = (student) => {
+    let total = 0;
+    let count = 0;
+
+    savedAssignments.forEach((assignment) => {
+        const gradeKey = `${student.StudentId}-${assignment.assignmentId}`;
+        const existingGrade = grades[gradeKey]?.gradeValue;
+      
+        if (existingGrade !== undefined) {
+            total += existingGrade;
+            count++;
+        }
+    });
+    const average = count > 0 ? Math.round(total / count) : "";
+    return average
+}
+
   return (
     <>
         <div>
@@ -144,6 +163,7 @@ const updateGrade = async (e, gradeId) => {
             <thead>
             <tr>
                 <th>Student Name</th>
+                <th>Grade Average</th>
               <> 
               {savedAssignments.map((assignment) => {
                 return (
@@ -163,6 +183,7 @@ const updateGrade = async (e, gradeId) => {
                       <tbody>                          
                         <tr>
                             <td key={student.StudentId} onClick={() => handleStudentClick(student)}>{student.FirstName} {student.LastName}</td>
+                            <td>{calculateAverage(student)}</td>
                             {savedAssignments.map((assignment) => {
                                 const gradeKey = `${student.StudentId}-${assignment.assignmentId}`;
                                 const existingGrade = grades[gradeKey]?.gradeValue;
