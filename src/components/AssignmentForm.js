@@ -1,6 +1,8 @@
 import {useState} from 'react';
 import Modal from 'react-modal';
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+
 
 function AssignmentForm({token}) {
     const [openAssignmentForm, setOpenAssignmentForm] = useState(false);
@@ -22,6 +24,7 @@ function AssignmentForm({token}) {
     const saveAssignment = async() => {
 
         const assignment = {
+            assignmentId: uuidv4(),
             type: type,
             shortName: assignmentName,
             summary: assignmentSummary,
@@ -29,7 +32,7 @@ function AssignmentForm({token}) {
             dueDate: dueDate
         };
         try{
-        const response = await axios.post('http://localhost:3100/assignments', assignment, {
+        const response = await axios.post('http://localhost:3100/save-assignment', assignment, {
             headers: {
                 Authorization: `Bearer ${token}`
            }

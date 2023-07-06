@@ -13,8 +13,7 @@ function StudentInfo({isOpen, onRequestClose, selectedStudent}) {
     const choppedDateOfBirth = dob.slice(0,10);
     const newDateOfBirth = choppedDateOfBirth.substring(5) + "-" + choppedDateOfBirth.substring(0,4);
     return newDateOfBirth;
-    
-}
+  }
   
   return (
   

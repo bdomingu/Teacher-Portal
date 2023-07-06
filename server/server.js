@@ -107,9 +107,16 @@ app.post('/logout',  (req, res) => {
 
 app.get('/students', authenticateToken, (req, res) => {
     if (req.user && req.user.TeacherId){
-        const query = `SELECT * FROM Students s INNER JOIN Parents p
-                    ON s.StudentId = p.StudentId
-                    WHERE TeacherId = ${req.user.TeacherId} ORDER BY s.LastName ASC`;
+        const query = `SELECT s.*, p.*, g.averageGrade
+        FROM Students s
+        INNER JOIN Parents p ON s.StudentId = p.StudentId
+        LEFT JOIN (
+          SELECT StudentId, AVG(gradeValue) AS averageGrade
+          FROM Grades
+          GROUP BY StudentId
+        ) g ON s.StudentId = g.StudentId
+        WHERE TeacherId = ${req.user.TeacherId}
+        ORDER BY s.LastName ASC`;
 
         connection.query(query, (err, results) => {
             if (err) {
@@ -123,11 +130,11 @@ app.get('/students', authenticateToken, (req, res) => {
 })
 
 
-app.post('/assignments', jsonParser, authenticateToken, (req, res) => {
-    const {type, shortName, summary, assignedDate, dueDate } = req.body;
-
-    const query = `INSERT INTO Assignments (type, shortName, summary, assignedDate, dueDate) 
-                    VALUES ('${type}', '${shortName}', '${summary}', '${assignedDate}', '${dueDate}')`;
+app.post('/save-assignment', jsonParser, authenticateToken, (req, res) => {
+    const {assignmentId, type, shortName, summary, assignedDate, dueDate } = req.body;
+    if (req.user && req.user.TeacherId){
+    const query = `INSERT INTO Assignments (assignmentId, type, shortName, summary, assignedDate, dueDate, TeacherId) 
+                    VALUES ('${assignmentId}','${type}', '${shortName}', '${summary}', '${assignedDate}', '${dueDate}', '${req.user.TeacherId}')`;
 
     connection.query(query, (err, results) => {
         if (err) {
@@ -140,6 +147,7 @@ app.post('/assignments', jsonParser, authenticateToken, (req, res) => {
         })
         }
      })
+    }
 });
 
 app.get('/assignments', authenticateToken, (req, res) => {
@@ -159,7 +167,6 @@ app.get('/assignments', authenticateToken, (req, res) => {
 
 app.post('/post-grade', jsonParser, authenticateToken, (req, res) => {
     const {gradeId, gradeValue, studentId, assignmentId } = req.body;
-
     if (req.user && req.user.TeacherId){
     const query = `INSERT INTO Grades (gradeId, gradeValue, StudentId, assignmentId, TeacherId) 
                     VALUES ('${gradeId}', ${gradeValue}, '${studentId}', '${assignmentId}', ${req.user.TeacherId})`;
@@ -169,10 +176,7 @@ app.post('/post-grade', jsonParser, authenticateToken, (req, res) => {
             res.status(500).send('Error adding grade');
             console.error(err);
         } else {
-        res.json({
-            "message": "Added grade succesfully",
-            "results": results
-        })
+        res.status(200).send('Grade added successfully');
         }
      })
     }
@@ -198,8 +202,6 @@ app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
     const gradeId = req.params.gradeId;
     const { gradeValue } = req.body;
 
-    console.log(gradeValue)
-
     const query = `UPDATE Grades SET gradeValue = ${gradeValue} WHERE gradeId = '${gradeId}'`;
     connection.query(query, (err, results) => {
         if (err) {
@@ -212,6 +214,10 @@ app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
             })
         }
     })
+})
+
+app.delete('/delete-assignment', jsonParser, authenticateToken, (req, res) => {
+
 })
 
 

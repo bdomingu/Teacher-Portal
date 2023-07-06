@@ -4,23 +4,33 @@ import Logout from './Logout';
 import StudentInfo from './StudentInfo';
 import AssignmentForm from './AssignmentForm';
 import { v4 as uuidv4 } from 'uuid';
+import AssignmentInfo from './AssignmentInfo';
+import { set } from 'lodash';
 
 
 function Students() {
     const [roster, setRoster] = useState([]);
     const [token] = useState((localStorage.getItem('token')))
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [showPopUp, setShowPopUp] = useState(false);
+    const [assignmentPopUp, setAssignmentPopUp] = useState(false);
     const [savedAssignments, setSavedAssignments] = useState([]);
-    const [grade, setGrade] = useState();
     const [grades, setGrades] = useState({});
+    const [savedGrades, setSavedGrades] = useState({});
     
 
 
     const handleStudentClick = useCallback((student) => {
-        setSelectedStudent(student)
-        setShowPopUp(true)
+        setSelectedStudent(student);
+        setShowPopUp(true);
     }, [])
+
+    const handleAssignmentClick = useCallback((assignment) => {
+        setSelectedAssignment(assignment);
+        setAssignmentPopUp(true);
+    }, [])
+
 
     const getStudentRoster = async () => {
         try{
@@ -29,19 +39,20 @@ function Students() {
                      Authorization: `Bearer ${token}`
                 }
             });
-
+    
             const students = await response.data
             setRoster(students)
         } catch(error) {
             console.error(error);
         }
     };
-
+    
     useEffect(() => {
         getStudentRoster();
-    }, [token]);
-
-const getAssignments = async () => {
+    }, [token, grades]);
+  
+// Return the assignments specific to the Teacher who is logged in //
+    const getAssignments = async () => {
     try {
         const response = await axios.get('http://localhost:3100/assignments', {
             headers: {
@@ -55,17 +66,56 @@ const getAssignments = async () => {
     } catch(error) {
         console.error(error)
     }
-}
+    }
 
-useEffect(() => {
-    getAssignments();
-});
+    useEffect(() => {
+        getAssignments();
+    }, [savedAssignments]);
 
-const postGrade = async (event, studentId, assignmentId) => {
-    event.preventDefault();
+
+    const getGrades = async () => {
+        try {
+            const response = await axios.get('http://localhost:3100/grades', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+            const gradesData = await response.data
+           
+            const grades = {};
+    
+            gradesData.forEach(grade => {
+                const key = `${grade.StudentId}-${grade.assignmentId}`;
+                grades[key] = {
+                    gradeValue:grade.gradeValue,
+                    gradeId: grade.gradeId
+                }
+            });
+           
+            setSavedGrades(grades);
+            
+        } catch (error) {
+            console.error(error);
+        }
+        };
+    
+    
+        useEffect(() => {
+            getGrades();
+        }, [grades])
+    
+        
+
+    const postGrade = async (e, studentId, assignmentId) => {   
+    e.preventDefault();
+    const key = `${studentId}-${assignmentId}`;
+    if(key in savedGrades){
+       updateGrade(e, savedGrades[`${studentId}-${assignmentId}`]?.gradeId, studentId, assignmentId)
+    } else {
+  
     const gradeData = {
         gradeId: uuidv4(),
-        gradeValue: grade,
+        gradeValue: grades[`${studentId}-${assignmentId}`],
         studentId: studentId,
         assignmentId: assignmentId
     }
@@ -75,52 +125,27 @@ const postGrade = async (event, studentId, assignmentId) => {
             Authorization: `Bearer ${token}`
         }
      })
-     const gradeValue = response.data
-     setGrade(gradeValue);
+     const status = response.status
+     if(status === 200) {
+        getStudentRoster()
+     }
+     
     } catch(error) {
         console.error(error)
     }
-}
-
-const getGrades = async () => {
-    try {
-        const response = await axios.get('http://localhost:3100/grades', {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-        const gradesData = await response.data
-       
-        const grades = {};
-
-        gradesData.forEach(grade => {
-            const key = `${grade.StudentId}-${grade.assignmentId}`;
-            grades[key] = {
-                gradeValue:grade.gradeValue,
-                gradeId: grade.gradeId
-            }
-        });
-
-
-       
-        setGrades(grades);
-        
-    } catch (error) {
-        console.error(error);
     }
-};
+    }
 
 
-useEffect(() => {
-    getGrades();
-}, [])
+  
 
-
-const updateGrade = async (e, gradeId) => {
+    const updateGrade = async (e, gradeId, studentId, assignmentId) => {
     e.preventDefault();
+    console.log(studentId);
+    console.log(assignmentId)
     console.log(gradeId)
     const updatedValue = {
-        gradeValue: grade
+        gradeValue: grades[`${studentId}-${assignmentId}`]
     }
     try {
         const response = await axios.put(`http://localhost:3100/update-grade/${gradeId}`, updatedValue, {
@@ -135,24 +160,10 @@ const updateGrade = async (e, gradeId) => {
         console.error(error)
     }
 
-}
+    }
 
-const calculateAverage = (student) => {
-    let total = 0;
-    let count = 0;
 
-    savedAssignments.forEach((assignment) => {
-        const gradeKey = `${student.StudentId}-${assignment.assignmentId}`;
-        const existingGrade = grades[gradeKey]?.gradeValue;
-      
-        if (existingGrade !== undefined) {
-            total += existingGrade;
-            count++;
-        }
-    });
-    const average = count > 0 ? Math.round(total / count) : "";
-    return average
-}
+
 
   return (
     <>
@@ -168,7 +179,7 @@ const calculateAverage = (student) => {
               {savedAssignments.map((assignment) => {
                 return (
                     <>
-                    <th>{assignment.shortName}</th>
+                    <th onClick={() => handleAssignmentClick(assignment)}>{assignment.shortName}</th>
                     </>
                 )
               })}
@@ -183,37 +194,25 @@ const calculateAverage = (student) => {
                       <tbody>                          
                         <tr>
                             <td key={student.StudentId} onClick={() => handleStudentClick(student)}>{student.FirstName} {student.LastName}</td>
-                            <td>{calculateAverage(student)}</td>
+                            {student.averageGrade === null ? <td></td> : <td>{Math.round(student.averageGrade)}</td>}
+                            
                             {savedAssignments.map((assignment) => {
-                                const gradeKey = `${student.StudentId}-${assignment.assignmentId}`;
-                                const existingGrade = grades[gradeKey]?.gradeValue;
-                                const gradeId = grades[gradeKey]?.gradeId
-
+                        
+                            const handleGradeChange = (e, studentId, assignmentId) => {
+                               const key = `${studentId}-${assignmentId}`;
+                                setGrades(prevGrades => ({
+                                ...prevGrades,
+                                [key]: e.target.value
+                                }));
+                            }
                                 return <td key={assignment.assignment}>
+                                <form onSubmit={(e) => postGrade(e, student.StudentId, assignment.assignmentId)}>
                                 <input
-                                defaultValue={existingGrade}
-                                onChange={(e) => setGrade(e.target.value)}
-                                onBlur = {(e) => {
-                                     e.preventDefault();
-                                     if (existingGrade) {
-                                        updateGrade(e, gradeId)
-                                     } else {
-                                        postGrade(e, student.StudentId, assignment.assignmentId);
-                                     }
-                                 }} 
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                     e.preventDefault();
-                                     if (existingGrade) {
-                                        updateGrade(e, gradeId)
-                                     } else {
-                                        postGrade(e, student.StudentId, assignment.assignmentId);
-                                     }
-                                     
-                                     }
-                                 }} 
-                                 type='text'
+                                type="text"
+                                defaultValue={savedGrades[`${student.StudentId}-${assignment.assignmentId}`]?.gradeValue || ''}
+                                onChange={(e) => handleGradeChange(e, student.StudentId, assignment.assignmentId)}
                                  />
+                                 </form>
                                 </td>
                             })}
                             
@@ -231,8 +230,13 @@ const calculateAverage = (student) => {
         onRequestClose={() => setShowPopUp(false)}
         selectedStudent={selectedStudent} />
     <AssignmentForm token={token} />
+    <AssignmentInfo 
+        isOpen={selectedAssignment && assignmentPopUp}
+        onRequestClose={() => setAssignmentPopUp(false)}
+        selectedAssignment={selectedAssignment}
+    />
     </>
-   
+
   )
 }
 
