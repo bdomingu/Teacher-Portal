@@ -51,7 +51,7 @@ function Students() {
         getStudentRoster();
     }, [token, grades]);
   
-// Return the assignments specific to the Teacher who is logged in //
+
     const getAssignments = async () => {
     try {
         const response = await axios.get('http://localhost:3100/assignments', {
@@ -70,7 +70,7 @@ function Students() {
 
     useEffect(() => {
         getAssignments();
-    }, [savedAssignments]);
+    }, [savedAssignments, grades, savedGrades]);
 
 
     const getGrades = async () => {
@@ -141,9 +141,7 @@ function Students() {
 
     const updateGrade = async (e, gradeId, studentId, assignmentId) => {
     e.preventDefault();
-    console.log(studentId);
-    console.log(assignmentId)
-    console.log(gradeId)
+   
     const updatedValue = {
         gradeValue: grades[`${studentId}-${assignmentId}`]
     }
@@ -154,8 +152,10 @@ function Students() {
             }
         })
 
-     const updateGrade = response.data;
-    console.log(updateGrade)
+    const status = response.status
+    if(status === 200) {
+        getStudentRoster()
+    }
     } catch(error) {
         console.error(error)
     }
@@ -163,7 +163,7 @@ function Students() {
     }
 
 
-
+// console.log(grades)
 
   return (
     <>
@@ -230,7 +230,9 @@ function Students() {
         onRequestClose={() => setShowPopUp(false)}
         selectedStudent={selectedStudent} />
     <AssignmentForm token={token} />
-    <AssignmentInfo 
+    <AssignmentInfo
+        getStudentRoster={getStudentRoster}
+        token={token}
         isOpen={selectedAssignment && assignmentPopUp}
         onRequestClose={() => setAssignmentPopUp(false)}
         selectedAssignment={selectedAssignment}

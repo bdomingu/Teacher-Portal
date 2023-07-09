@@ -152,7 +152,8 @@ app.post('/save-assignment', jsonParser, authenticateToken, (req, res) => {
 
 app.get('/assignments', authenticateToken, (req, res) => {
     if (req.user && req.user.TeacherId){
-        const query = 'SELECT * FROM Assignments';
+        const query = `SELECT * FROM Assignments WHERE TeacherId=${req.user.TeacherId} 
+                       ORDER BY assignedDate DESC`;
 
         connection.query(query, (err, results) => {
             if (err) {
@@ -163,7 +164,7 @@ app.get('/assignments', authenticateToken, (req, res) => {
         }
     })
     }
-})
+});
 
 app.post('/post-grade', jsonParser, authenticateToken, (req, res) => {
     const {gradeId, gradeValue, studentId, assignmentId } = req.body;
@@ -196,7 +197,7 @@ app.get('/grades', authenticateToken, (req, res) => {
         }
     })
     }
-})
+});
 
 app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
     const gradeId = req.params.gradeId;
@@ -208,17 +209,38 @@ app.put('/update-grade/:gradeId', jsonParser, authenticateToken, (req, res) => {
             console.error(err)
             res.status(500).send('Error updating grade.');
         } else {
-            res.json({
-                "message": "Edited grade succesfully",
-                "results": results
-            })
+            res.status(200).send('Updated grade succesfully');
         }
     })
-})
+});
 
-app.delete('/delete-assignment', jsonParser, authenticateToken, (req, res) => {
+app.delete('/remove-assignment/:assignmentId', jsonParser, authenticateToken, (req, res) => {
+    const assignmentId = req.params.assignmentId;
+    
+    const query = `DELETE FROM Grades WHERE assignmentId='${assignmentId}'`;
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err)
+            res.status(500).send('Error updating.');
+        } else {
+            res.status(200).send('Updated succesfully');
+        }
+    })
+});
 
-})
+app.delete('/delete-assignment/:assignmentId', jsonParser, authenticateToken, (req, res) => {
+    const assignmentId = req.params.assignmentId;
+
+    const query = `DELETE FROM Assignments WHERE assignmentId = '${assignmentId}'`;
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err)
+            res.status(500).send('Error deleting assignment.');
+        } else {
+            res.status(200).send('Deleted assignment succesfully');
+        }
+    })
+});
 
 
 app.listen(port, () => {

@@ -1,9 +1,10 @@
 import Modal from 'react-modal';
+import axios from 'axios';
 
 
 Modal.setAppElement('#root');
 
-function AssignmentInfo({isOpen, onRequestClose, selectedAssignment}) {
+function AssignmentInfo({token, isOpen, onRequestClose, selectedAssignment, getStudentRoster}) {
 
   if (!selectedAssignment) {
     return null;
@@ -15,9 +16,35 @@ function AssignmentInfo({isOpen, onRequestClose, selectedAssignment}) {
     return newDateOfBirth;
   }
 
-  const deleteAssignment = (assignmentId) => {
 
-  }
+  
+  const deleteAssignment = async (e, assignmentId) => {
+      e.preventDefault();
+      try{
+      const response = await axios.delete(`http://localhost:3100/remove-assignment/${assignmentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+          }
+      });
+      const status = response.status
+      if(status === 200) {
+        const deleteResponse = await axios.delete(`http://localhost:3100/delete-assignment/${assignmentId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        const deleteStatus = deleteResponse.status
+        if(deleteStatus === 200){
+          onRequestClose()
+          getStudentRoster()
+        }
+      }
+      console.log(status);
+      } catch(error){
+          console.error(error)
+      }
+    }
+  
 
   
   return (
@@ -28,7 +55,7 @@ function AssignmentInfo({isOpen, onRequestClose, selectedAssignment}) {
     <p>Date Assigned: {convertDate(selectedAssignment.assignedDate)}</p>
     <p>Date Due: {convertDate(selectedAssignment.dueDate)}</p>
     <button onClick={onRequestClose}>close</button>
-    <button onClick={deleteAssignment(selectedAssignment.assignmentId)}>Delete Assignment</button>
+    <button onClick={(e) => deleteAssignment(e, selectedAssignment.assignmentId)}>Delete Assignment</button>
     </Modal>
   )
 }
